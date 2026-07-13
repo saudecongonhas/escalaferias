@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escala de Férias — Secretaria de Saúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1F2A24;
+    --ink-soft:#4B5A52;
+    --bg:#F3F5F0;
+    --card:#FFFFFF;
+    --line:#E1E6DD;
+    --teal:#1B4B43;
+    --teal-dark:#123832;
+    --gold:#C9972E;
+    --gold-soft:#F4E7C9;
+    --brick:#A8452C;
+    --brick-soft:#F5DCD4;
+    --green:#3F7D58;
+    --green-soft:#DDEEE1;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(20,30,25,0.06), 0 8px 24px -12px rgba(20,30,25,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:15px; line-height:1.5;
+    padding-bottom:80px;
+  }
+  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:600; color:var(--teal-dark); margin:0 0 4px; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  header.top{
+    background:var(--teal); color:#fff; padding:28px 24px 22px;
+    position:relative; overflow:hidden;
+  }
+  header.top::after{
+    content:""; position:absolute; right:-40px; top:-40px; width:220px; height:220px;
+    border-radius:50%; background:radial-gradient(circle, rgba(201,151,46,0.35), transparent 70%);
+  }
+  header.top h1{ color:#fff; font-size:26px; letter-spacing:.2px; position:relative; }
+  header.top p{ margin:4px 0 18px; color:#D9E4DD; font-size:13.5px; position:relative; }
+  .tabs{ display:flex; gap:8px; position:relative; }
+  .tab-btn{
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#fff;
+    padding:9px 18px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;
+    transition:background .15s;
+  }
+  .tab-btn:hover{ background:rgba(255,255,255,0.22); }
+  .tab-btn.active{ background:var(--gold); border-color:var(--gold); color:var(--teal-dark); }
+
+  main{ max-width:920px; margin:0 auto; padding:22px 20px; }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px 24px; margin-bottom:18px; box-shadow:var(--shadow);
+  }
+  .card h2{ font-size:19px; margin-bottom:14px; }
+  .card h2 .eyebrow{ display:block; font-family:'Inter',sans-serif; font-weight:600; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--gold); margin-bottom:4px; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+  @media(max-width:640px){ .grid-2{ grid-template-columns:1fr; } }
+  label{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+  input,select{
+    font-family:inherit; font-size:14.5px; padding:10px 11px; border:1px solid var(--line);
+    border-radius:7px; background:#FAFBF9; color:var(--ink); outline:none;
+  }
+  input:focus,select:focus{ border-color:var(--teal); background:#fff; }
+  .full-row{ grid-column:1 / -1; }
+
+  .calendar-section{ margin-top:20px; border-top:1px solid var(--line); padding-top:16px; }
+  .calendar-section.disabled{ opacity:.45; pointer-events:none; }
+  .hint{ font-size:13px; color:var(--ink-soft); margin:0 0 10px; }
+  .calendar-nav{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .calendar-nav button{
+    background:var(--teal); color:#fff; border:none; width:30px; height:30px; border-radius:6px;
+    cursor:pointer; font-size:16px; line-height:1;
+  }
+  .calendar-nav button:disabled{ background:#C6CCC4; cursor:not-allowed; }
+  .calendar-nav span#monthLabel{ font-weight:700; font-family:'Fraunces',serif; color:var(--teal-dark); min-width:150px; text-align:center; }
+  .calendar-nav select{ margin-left:auto; padding:6px 8px; }
+
+  .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .dow{ font-size:10.5px; text-align:center; font-weight:700; color:var(--ink-soft); padding-bottom:4px; text-transform:uppercase; letter-spacing:.5px;}
+  .day{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:7px;
+    font-size:13px; font-weight:600; cursor:pointer; border:1px solid transparent; position:relative;
+  }
+  .day.empty{ visibility:hidden; }
+  .day.available{ background:var(--green-soft); color:#20502F; }
+  .day.available:hover{ outline:2px solid var(--green); }
+  .day.blocked{ background:var(--brick-soft); color:#7A3220; cursor:not-allowed; }
+  .day.past{ background:transparent; color:#C6CCC4; cursor:not-allowed; }
+  .day.selected{ background:var(--teal); color:#fff; outline:2px solid var(--gold); }
+
+  .legend{ display:flex; gap:16px; margin-top:12px; flex-wrap:wrap; }
+  .legend span{ font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  .legend i{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+
+  .summary{
+    margin-top:16px; background:var(--gold-soft); border:1px solid #E7CE93; border-radius:8px;
+    padding:14px 16px; font-size:13.5px;
+  }
+  .summary.hidden{ display:none; }
+  .summary b{ color:var(--teal-dark); }
+
+  button.primary{
+    margin-top:16px; background:var(--teal); color:#fff; border:none; padding:12px 20px;
+    border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; letter-spacing:.2px;
+  }
+  button.primary:disabled{ background:#B7C2BC; cursor:not-allowed; }
+  button.secondary{
+    background:#fff; color:var(--teal); border:1px solid var(--teal); padding:10px 16px;
+    border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  button.danger{
+    background:#fff; color:var(--brick); border:1px solid var(--brick); padding:6px 12px;
+    border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .msg{ font-size:13px; margin-top:10px; font-weight:600; }
+  .msg.ok{ color:var(--green); }
+  .msg.err{ color:var(--brick); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  th,td{ text-align:left; padding:8px 9px; border-bottom:1px solid var(--line); }
+  th{ font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-soft); }
+  tr:hover td{ background:#FAFBF9; }
+
+  .filters{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .filters select,.filters input{ padding:8px 10px; font-size:13px; }
+
+  .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .badge.auxiliar{ background:#E5EEF6; color:#2A5A82; }
+  .badge.tecnico{ background:var(--green-soft); color:#20502F; }
+  .badge.enfermeiro{ background:var(--gold-soft); color:#8A6414; }
+  .badge.medico{ background:#F0E1F0; color:#6B2F6B; }
+
+  .hidden{ display:none !important; }
+  .toolbar{ display:flex; gap:10px; margin:14px 0; flex-wrap:wrap; }
+  .occ-table td.full{ background:var(--brick-soft); color:#7A3220; font-weight:700; }
+  .small-note{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div id="setupWarning" class="hidden" style="background:#7A3220;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;text-align:center;">
+  ⚠ Backend não configurado: edite a constante <span class="mono">API_URL</span> no código deste arquivo com a URL do seu Apps Script.
+</div>
+<header class="top">
+  <h1>Escala de Férias</h1>
+  <p>Secretaria Municipal de Saúde de Congonhas/MG</p>
+  <div class="tabs">
+    <button class="tab-btn active" data-view="funcionario">Sou Funcionário(a)</button>
+    <button class="tab-btn" data-view="admin">Painel Administrativo</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ===================== VIEW FUNCIONÁRIO ===================== -->
+<section id="view-funcionario">
+
+  <div class="card">
+    <h2><span class="eyebrow">Solicitação</span>Seus dados e tipo de férias</h2>
+    <div class="grid-2">
+      <label>E-mail
+        <input type="email" id="f_email" placeholder="seunome@congonhas.mg.gov.br">
+      </label>
+      <label>Nome completo
+        <input type="text" id="f_nome" placeholder="Nome completo">
+      </label>
+      <label>Matrícula
+        <input type="text" id="f_matricula" placeholder="Nº de matrícula">
+      </label>
+      <label>Unidade (PSF)
+        <select id="f_unidade">
+          <option value="">Selecione a unidade...</option>
+        </select>
+      </label>
+      <label>Cargo
+        <select id="f_cargo">
+          <option value="">Selecione o cargo...</option>
+        </select>
+      </label>
+      <label>Quantidade / tipo de dias
+        <select id="f_tipo">
+          <option value="">Selecione o tipo...</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="calendarSection" class="calendar-section disabled">
+      <p class="hint">Selecione o cargo e o tipo de férias acima para habilitar o calendário. A escala de 2026 já está fechada — o agendamento está disponível somente para 2027.</p>
+      <div class="calendar-nav">
+        <button id="prevMonth" type="button">‹</button>
+        <span id="monthLabel">—</span>
+        <button id="nextMonth" type="button">›</button>
+        <select id="yearSelect"></select>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="legend">
+        <span><i style="background:var(--green-soft)"></i>Disponível</span>
+        <span><i style="background:var(--brick-soft)"></i>Lotado (limite do cargo atingido)</span>
+        <span><i style="background:#E9ECE6"></i>Data passada</span>
+        <span><i style="background:var(--teal)"></i>Selecionada</span>
+      </div>
+    </div>
+
+    <div id="summaryBox" class="summary hidden"></div>
+    <button class="primary" id="submitBtn" disabled>Confirmar Solicitação</button>
+    <p class="msg" id="formMsg"></p>
+  </div>
+
+  <div class="card">
+    <h2><span class="eyebrow">Consulta</span>Minhas solicitações</h2>
+    <div class="grid-2">
+      <label>E-mail utilizado no cadastro
+        <input type="email" id="lookupEmail" placeholder="seunome@congonhas.mg.gov.br">
+      </label>
+      <label>&nbsp;
+        <button class="secondary" id="lookupBtn" type="button">Buscar</button>
+      </label>
+    </div>
+    <div id="lookupResults"></div>
+  </div>
+
+</section>
+
+<!-- ===================== VIEW ADMIN ===================== -->
+<section id="view-admin" class="hidden">
+
+  <div class="card" id="adminLoginCard">
+    <h2>Acesso Administrativo</h2>
+    <div class="grid-2">
+      <label>Senha
+        <input type="password" id="adminPass" placeholder="Digite a senha">
+      </label>
+      <label>&nbsp;
+        <button class="secondary" id="adminLoginBtn" type="button">Entrar</button>
+      </label>
+    </div>
+    <p class="msg" id="adminMsg"></p>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+
+    <div class="card">
+      <h2><span class="eyebrow">Visão geral</span>Todas as solicitações</h2>
+      <div class="filters">
+        <select id="filterCargo"><option value="">Todos os cargos</option></select>
+        <input type="text" id="filterUnidade" placeholder="Filtrar por unidade">
+        <input type="text" id="filterBusca" placeholder="Buscar nome, matrícula ou e-mail">
+        <button class="secondary" id="exportCsvBtn" type="button">Exportar CSV</button>
+      </div>
+      <table id="adminTable">
+        <thead>
+          <tr><th>Cargo</th><th>Nome</th><th>Matrícula</th><th>Unidade</th><th>Tipo</th><th>Início</th><th>Fim</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="small-note" id="adminCount"></p>
+    </div>
+
+    <div class="card">
+      <h2><span class="eyebrow">Ocupação</span>Vagas ocupadas por dia</h2>
+      <div class="calendar-nav">
+        <button id="occPrev" type="button">‹</button>
+        <span id="occMonthLabel">—</span>
+        <button id="occNext" type="button">›</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="occ-table" id="occTable"><thead></thead><tbody></tbody></table>
+      </div>
+      <p class="small-note">Célula destacada = limite do cargo atingido naquele dia.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="eyebrow">Configuração</span>Alterar senha administrativa</h2>
+      <div class="grid-2">
+        <label>Nova senha
+          <input type="password" id="newAdminPass">
+        </label>
+        <label>&nbsp;
+          <button class="secondary" id="changePassBtn" type="button">Salvar nova senha</button>
+        </label>
+      </div>
+      <p class="msg" id="passMsg"></p>
+    </div>
+
+  </div>
+</section>
+
+</main>
+
+<script>
+(function(){
+
+  const CARGOS = {
+    auxiliar:   { label:'Auxiliar de Apoio',           limite:2 },
+    tecnico:    { label:'Técnico(a) de Enfermagem',    limite:4 },
+    enfermeiro: { label:'Enfermeiro(a)',               limite:2 },
+    medico:     { label:'Médico(a)',                   limite:2 },
+  };
+
+  const TIPOS = {
+    '25du':       { label:'25 Dias Úteis',                                                          diasUteis:25, abono:0  },
+    '16du_abono': { label:'16 Dias Úteis (com Abono Pecuniário de 10 dias corridos no início)',      diasUteis:16, abono:10 },
+    '13du_p1':    { label:'13 Dias Úteis — referente ao 1º Período',                                 diasUteis:13, abono:0  },
+    '12du_p2':    { label:'12 Dias Úteis — referente ao 2º Período (já gozou o 1º Período)',          diasUteis:12, abono:0  },
+  };
+
+  const UNIDADES = ['ALVORADA','BASÍLICA','SANTA QUITÉRIA','CAMPINHO','CENTRO I','CENTRO II',
+    'CINQUENTENÁRIO','DOM OSCAR I','DOM OSCAR II','IDEAL','JARDIM ANDREZA','LAMARTINE','MARANHÃO',
+    'PEQUERI','MURTINHO','VILA CARDOSO','VILA MARQUES','PIRES','BARNABÉ','PRIMAVERA','PROFETA I',
+    'IPIRANGA','PROFETA II','LOBO LEITE','RESIDENCIAL','SANTA MÔNICA','CAMPO DAS FLORES',
+    'VILA SÃO VICENTE','FERISTA'];
+
+  const DOW = ['D','S','T','Q','Q','S','S'];
+  const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  let allRecords = [];       // cache
+  let adminPassword = null;
+  let isAdmin = false;
+
+  // ---------- date helpers (all working on 'YYYY-MM-DD' strings) ----------
+  function toISO(d){ return d.toISOString().slice(0,10); }
+  function fromISO(s){ return new Date(s+'T00:00:00'); }
+  function addDaysISO(s,n){ const d=fromISO(s); d.setDate(d.getDate()+n); return toISO(d); }
+  function isWeekday(s){ const g=fromISO(s).getDay(); return g!==0 && g!==6; }
+
+  // feriados nacionais fixos + móveis + os 2 municipais de Congonhas/MG (15/08 e 08/12)
+  const holidayCache = {};
+  function easterISO(year){
+    // algoritmo de Meeus/Jones/Butcher
+    const a=year%19, b=Math.floor(year/100), c=year%100;
+    const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3);
+    const h=(19*a+b-d-g+15)%30, i=Math.floor(c/4), k=c%4;
+    const l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451);
+    const month=Math.floor((h+l-7*m+114)/31), day=((h+l-7*m+114)%31)+1;
+    return toISO(new Date(year, month-1, day));
+  }
+  function getHolidaysForYear(year){
+    if(holidayCache[year]) return holidayCache[year];
+    const set = new Set([
+      year+'-01-01', year+'-04-21', year+'-05-01', year+'-09-07', year+'-10-12',
+      year+'-11-02', year+'-11-15', year+'-11-20', year+'-12-25',
+      year+'-08-15', year+'-12-08', // feriados municipais oficiais de Congonhas/MG
+    ]);
+    const easter = easterISO(year);
+    set.add(addDaysISO(easter,-2)); // Sexta-feira Santa (feriado nacional oficial)
+    // Carnaval, Corpus Christi e 14/09 (Bom Jesus de Matosinhos) são pontos facultativos
+    // em Congonhas/MG: contam normalmente como dias úteis, não são excluídos aqui.
+    holidayCache[year] = set;
+    return set;
+  }
+  function isHoliday(s){ return getHolidaysForYear(parseInt(s.slice(0,4),10)).has(s); }
+  function isBusinessDay(s){ return isWeekday(s) && !isHoliday(s); }
+
+  function addBusinessDaysISO(s,n){
+    let cur=s, count=0;
+    while(count<n){
+      if(isBusinessDay(cur)) count++;
+      if(count<n) cur=addDaysISO(cur,1);
+    }
+    return cur;
+  }
+  function todayISO(){ return toISO(new Date()); }
+
+  function computeRange(startISO, tipoId){
+    const tipo = TIPOS[tipoId];
+    let businessStart = startISO;
+    if(tipo.abono>0){
+      const abonoEnd = addDaysISO(startISO, tipo.abono-1);
+      businessStart = addDaysISO(abonoEnd,1);
+    }
+    const end = addBusinessDaysISO(businessStart, tipo.diasUteis);
+    return { start:startISO, end };
+  }
+
+  function countOverlap(records, cargoId, dayISO, excludeId){
+    let c=0;
+    for(const r of records){
+      if(r.cargo!==cargoId) continue;
+      if(excludeId && r.id===excludeId) continue;
+      if(dayISO>=r.start && dayISO<=r.end) c++;
+    }
+    return c;
+  }
+
+  function isStartAvailable(records, cargoId, tipoId, candidateStartISO, excludeId){
+    const {start,end} = computeRange(candidateStartISO, tipoId);
+    const limite = CARGOS[cargoId].limite;
+    let d = start;
+    while(d<=end){
+      if(countOverlap(records, cargoId, d, excludeId) + 1 > limite) return false;
+      d = addDaysISO(d,1);
+    }
+    return true;
+  }
+
+  // ---------- backend (Google Apps Script + Google Sheets) ----------
+  // Cole aqui a URL do seu Apps Script publicado (termina em /exec).
+  // Veja o arquivo "AppsScript-Backend" para o passo a passo.
+  const API_URL = 'COLOQUE_AQUI_A_URL_DO_SEU_APPS_SCRIPT';
+
+  async function apiRequest(params){
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(API_URL + '?' + qs);
+    if(!res.ok) throw new Error('Falha na comunicação com o servidor.');
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    return data;
+  }
+
+  // usada só para as ações administrativas: a senha vai no corpo da requisição,
+  // não na URL — não fica salva no histórico do navegador nem no autocompletar.
+  async function apiPostRequest(params){
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(params)
+    });
+    if(!res.ok) throw new Error('Falha na comunicação com o servidor.');
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    return data;
+  }
+
+  // dados públicos mínimos (cargo + datas) — usados só para calcular disponibilidade no calendário.
+  // nome, e-mail, matrícula e unidade NUNCA trafegam por essa chamada.
+  async function loadAllRecords(){
+    if(API_URL.indexOf('COLOQUE_AQUI') === 0){
+      console.warn('Configure a API_URL no topo do script antes de usar o sistema.');
+      return [];
+    }
+    try{
+      const data = await apiRequest({ action:'list' });
+      return Array.isArray(data.records) ? data.records : [];
+    }catch(e){ console.error(e); return []; }
+  }
+
+  async function lookupOwnRecords(email){
+    const data = await apiRequest({ action:'lookup', email });
+    return Array.isArray(data.records) ? data.records : [];
+  }
+  async function deleteOwnRecord(id, email){
+    const data = await apiRequest({ action:'deleteOwn', id, email });
+    return !!data.ok;
+  }
+
+  function populateUnidadeSelect(){
+    const opts = UNIDADES.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+    document.getElementById('f_unidade').insertAdjacentHTML('beforeend', opts);
+  }
+
+  // ---- admin: a senha é sempre verificada no servidor; nunca é lida/retornada por aqui ----
+  async function adminLogin(password){
+    const data = await apiPostRequest({ action:'adminLogin', password });
+    return !!data.ok;
+  }
+  async function adminLoadAllRecords(password){
+    const data = await apiPostRequest({ action:'adminList', password });
+    return Array.isArray(data.records) ? data.records : [];
+  }
+  async function adminDeleteRecord(password, id){
+    await apiPostRequest({ action:'adminDelete', password, id });
+  }
+  async function adminChangePasswordRequest(oldPassword, newPassword){
+    await apiPostRequest({ action:'adminChangePassword', password:oldPassword, newPassword });
+  }
+
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ---------- populate selects ----------
+  function populateCargoSelects(){
+    const opts = Object.entries(CARGOS).map(([id,c])=>`<option value="${id}">${c.label}</option>`).join('');
+    document.getElementById('f_cargo').insertAdjacentHTML('beforeend', opts);
+    document.getElementById('filterCargo').insertAdjacentHTML('beforeend',
+      Object.entries(CARGOS).map(([id,c])=>`<option value="${id}">${c.label}</option>`).join(''));
+  }
+  function populateTipoSelect(){
+    const opts = Object.entries(TIPOS).map(([id,t])=>`<option value="${id}">${t.label}</option>`).join('');
+    document.getElementById('f_tipo').insertAdjacentHTML('beforeend', opts);
+  }
+
+  // ---------- calendar (form) ----------
+  let calYear, calMonth; // calMonth 0-11
+  let selectedStartISO = null;
+
+  const ESCALA_YEAR = 2027; // escala de 2026 já fechada/lotada; agendamento liberado somente para 2027
+
+  function initCalendarNav(){
+    calYear = ESCALA_YEAR; calMonth = 0;
+    const ySel = document.getElementById('yearSelect');
+    ySel.innerHTML = `<option value="${ESCALA_YEAR}">${ESCALA_YEAR}</option>`;
+    ySel.value = ESCALA_YEAR;
+    ySel.disabled = true;
+    document.getElementById('prevMonth').onclick=()=>{ if(calMonth>0){ calMonth--; renderCalendar(); } };
+    document.getElementById('nextMonth').onclick=()=>{ if(calMonth<11){ calMonth++; renderCalendar(); } };
+  }
+
+  function currentSelection(){
+    return { cargo: document.getElementById('f_cargo').value, tipo: document.getElementById('f_tipo').value };
+  }
+
+  function renderCalendar(){
+    const grid = document.getElementById('calendarGrid');
+    const label = document.getElementById('monthLabel');
+    label.textContent = MONTHS[calMonth] + ' / ' + calYear;
+    document.getElementById('prevMonth').disabled = (calMonth===0);
+    document.getElementById('nextMonth').disabled = (calMonth===11);
+    const { cargo, tipo } = currentSelection();
+    const section = document.getElementById('calendarSection');
+    if(!cargo || !tipo){
+      section.classList.add('disabled');
+      grid.innerHTML='';
+      return;
+    }
+    section.classList.remove('disabled');
+
+    let html = DOW.map(d=>`<div class="dow">${d}</div>`).join('');
+    const firstDay = new Date(calYear, calMonth, 1);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    const today = todayISO();
+
+    for(let i=0;i<startWeekday;i++) html += `<div class="day empty"></div>`;
+
+    for(let day=1; day<=daysInMonth; day++){
+      const iso = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      let cls='day';
+      if(iso < today){
+        cls+=' past';
+      } else if(selectedStartISO===iso){
+        cls+=' selected';
+      } else if(isStartAvailable(allRecords, cargo, tipo, iso)){
+        cls+=' available';
+      } else {
+        cls+=' blocked';
+      }
+      html += `<div class="${cls}" data-iso="${iso}">${day}</div>`;
+    }
+    grid.innerHTML = html;
+
+    grid.querySelectorAll('.day.available, .day.selected').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        selectedStartISO = el.dataset.iso;
+        renderCalendar();
+        updateSummary();
+      });
+    });
+  }
+
+  function updateSummary(){
+    const box = document.getElementById('summaryBox');
+    const btn = document.getElementById('submitBtn');
+    const { cargo, tipo } = currentSelection();
+    if(!selectedStartISO || !cargo || !tipo){
+      box.classList.add('hidden'); btn.disabled=true; return;
+    }
+    const { start, end } = computeRange(selectedStartISO, tipo);
+    box.classList.remove('hidden');
+    box.innerHTML = `<b>Resumo:</b> ${CARGOS[cargo].label} • ${TIPOS[tipo].label}<br>
+      Início: <b>${fmtDate(start)}</b> &nbsp;→&nbsp; Retorno ao trabalho: <b>${fmtDate(addDaysISO(end,1))}</b> (último dia de férias: ${fmtDate(end)})`;
+    btn.disabled=false;
+  }
+
+  function fmtDate(iso){
+    const [y,m,d]=iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  // ---------- form submit ----------
+  async function handleSubmit(){
+    const email = document.getElementById('f_email').value.trim().toLowerCase();
+    const nome = document.getElementById('f_nome').value.trim();
+    const matricula = document.getElementById('f_matricula').value.trim();
+    const unidade = document.getElementById('f_unidade').value.trim();
+    const { cargo, tipo } = currentSelection();
+    const msg = document.getElementById('formMsg');
+    msg.textContent=''; msg.className='msg';
+
+    if(!email || !nome || !matricula || !unidade || !cargo || !tipo || !selectedStartISO){
+      msg.textContent = 'Preencha todos os campos e selecione uma data de início.';
+      msg.className='msg err';
+      return;
+    }
+
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Enviando...';
+
+    // verificação rápida no navegador, só para feedback imediato — quem decide de
+    // fato é o servidor, que trava e revalida tudo de novo antes de gravar.
+    allRecords = await loadAllRecords();
+    if(!isStartAvailable(allRecords, cargo, tipo, selectedStartISO)){
+      msg.textContent = 'Essa data acabou de ficar indisponível para o cargo selecionado. Escolha outra data.';
+      msg.className='msg err';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = 'Confirmar Solicitação';
+      selectedStartISO = null;
+      renderCalendar(); updateSummary();
+      return;
+    }
+
+    try{
+      const result = await apiRequest({ action:'create', email, nome, matricula, unidade, cargo, tipo, start:selectedStartISO });
+      msg.textContent = `Solicitação confirmada! Férias de ${fmtDate(result.start)} até ${fmtDate(result.end)}.`;
+      msg.className='msg ok';
+      selectedStartISO = null;
+      document.getElementById('summaryBox').classList.add('hidden');
+      allRecords = await loadAllRecords();
+      renderCalendar();
+    }catch(e){
+      // o servidor recusou (data ocupada por outra pessoa nesse meio-tempo, ou sistema
+      // sob alta demanda) — recarrega o calendário para refletir a situação real.
+      msg.textContent = e.message || 'Não foi possível confirmar. Tente novamente.';
+      msg.className='msg err';
+      selectedStartISO = null;
+      allRecords = await loadAllRecords();
+      renderCalendar(); updateSummary();
+    }
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').textContent = 'Confirmar Solicitação';
+  }
+
+  // ---------- lookup / cancel ----------
+  async function handleLookup(){
+    const email = document.getElementById('lookupEmail').value.trim().toLowerCase();
+    const box = document.getElementById('lookupResults');
+    if(!email){ box.innerHTML = '<p class="msg err">Informe um e-mail.</p>'; return; }
+    let mine = [];
+    try{ mine = await lookupOwnRecords(email); }catch(e){ box.innerHTML = '<p class="msg err">Erro ao buscar. Tente novamente.</p>'; return; }
+    if(!mine.length){ box.innerHTML = '<p class="small-note">Nenhuma solicitação encontrada para este e-mail.</p>'; return; }
+    box.innerHTML = mine.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:10px 0;">
+        <div>
+          <span class="badge ${r.cargo}">${CARGOS[r.cargo].label}</span>
+          <div style="margin-top:4px;">${TIPOS[r.tipo].label}<br>
+          <b>${fmtDate(r.start)} → ${fmtDate(r.end)}</b> · ${escapeHtml(r.unidade)}</div>
+        </div>
+        <button class="danger" data-id="${r.id}">Cancelar</button>
+      </div>
+    `).join('');
+    box.querySelectorAll('button.danger').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('Cancelar esta solicitação de férias?')) return;
+        await deleteOwnRecord(b.dataset.id, email);
+        allRecords = await loadAllRecords();
+        handleLookup();
+      };
+    });
+  }
+
+  // ---------- admin ----------
+  let adminRecords = []; // dados completos — só carregados após login válido
+
+  async function handleAdminLogin(){
+    const input = document.getElementById('adminPass').value;
+    const msg = document.getElementById('adminMsg');
+    msg.textContent = 'Verificando...'; msg.className = 'msg';
+    let ok = false;
+    try{ ok = await adminLogin(input); }catch(e){ msg.textContent='Erro de comunicação com o servidor.'; msg.className='msg err'; return; }
+    if(ok){
+      isAdmin = true;
+      adminPassword = input; // mantido só em memória, nunca exibido, usado nas próximas chamadas admin
+      document.getElementById('adminLoginCard').classList.add('hidden');
+      document.getElementById('adminPanel').classList.remove('hidden');
+      msg.textContent='';
+      await refreshAdminTable();
+      renderOccupancy();
+    } else {
+      msg.textContent='Senha incorreta.'; msg.className='msg err';
+    }
+  }
+
+  async function refreshAdminTable(){
+    try{
+      adminRecords = await adminLoadAllRecords(adminPassword);
+    }catch(e){ adminRecords = []; }
+    renderAdminTable();
+  }
+
+  function renderAdminTable(){
+    const cargoF = document.getElementById('filterCargo').value;
+    const unidadeF = document.getElementById('filterUnidade').value.trim().toLowerCase();
+    const buscaF = document.getElementById('filterBusca').value.trim().toLowerCase();
+    let rows = adminRecords.filter(r=>{
+      if(cargoF && r.cargo!==cargoF) return false;
+      if(unidadeF && !r.unidade.toLowerCase().includes(unidadeF)) return false;
+      if(buscaF && !(r.nome.toLowerCase().includes(buscaF) || r.matricula.toLowerCase().includes(buscaF) || r.email.toLowerCase().includes(buscaF))) return false;
+      return true;
+    }).sort((a,b)=> a.start.localeCompare(b.start));
+
+    const tbody = document.querySelector('#adminTable tbody');
+    tbody.innerHTML = rows.map(r=>`
+      <tr>
+        <td><span class="badge ${r.cargo}">${CARGOS[r.cargo].label}</span></td>
+        <td>${escapeHtml(r.nome)}<br><span class="small-note">${escapeHtml(r.email)}</span></td>
+        <td class="mono">${escapeHtml(r.matricula)}</td>
+        <td>${escapeHtml(r.unidade)}</td>
+        <td>${TIPOS[r.tipo].label}</td>
+        <td>${fmtDate(r.start)}</td>
+        <td>${fmtDate(r.end)}</td>
+        <td><button class="danger" data-id="${r.id}">Excluir</button></td>
+      </tr>
+    `).join('');
+    document.getElementById('adminCount').textContent = rows.length + ' solicitação(ões) exibida(s) de ' + adminRecords.length + ' no total.';
+
+    tbody.querySelectorAll('button.danger').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('Excluir esta solicitação de férias?')) return;
+        await adminDeleteRecord(adminPassword, b.dataset.id);
+        await refreshAdminTable();
+        allRecords = await loadAllRecords();
+        renderOccupancy();
+      };
+    });
+  }
+
+  function exportCsv(){
+    const header = ['Cargo','Nome','Email','Matricula','Unidade','Tipo','Inicio','Fim'];
+    const lines = [header.join(';')];
+    adminRecords.slice().sort((a,b)=>a.start.localeCompare(b.start)).forEach(r=>{
+      lines.push([CARGOS[r.cargo].label, r.nome, r.email, r.matricula, r.unidade, TIPOS[r.tipo].label, fmtDate(r.start), fmtDate(r.end)]
+        .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';'));
+    });
+    const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'escala-ferias.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // occupancy view
+  let occYear, occMonth;
+  function renderOccupancy(){
+    if(occYear===undefined){ const n=new Date(); occYear=n.getFullYear(); occMonth=n.getMonth(); }
+    document.getElementById('occMonthLabel').textContent = MONTHS[occMonth]+' / '+occYear;
+    const daysInMonth = new Date(occYear, occMonth+1, 0).getDate();
+    const cargoIds = Object.keys(CARGOS);
+
+    const thead = document.querySelector('#occTable thead');
+    thead.innerHTML = '<tr><th>Dia</th>' + cargoIds.map(c=>`<th>${CARGOS[c].label}</th>`).join('') + '</tr>';
+
+    let rows='';
+    for(let day=1; day<=daysInMonth; day++){
+      const iso = occYear+'-'+String(occMonth+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      rows += `<tr><td class="mono">${fmtDate(iso)}</td>` + cargoIds.map(c=>{
+        const cnt = countOverlap(allRecords, c, iso);
+        const cls = cnt>=CARGOS[c].limite && cnt>0 ? 'full' : '';
+        return `<td class="${cls}">${cnt} / ${CARGOS[c].limite}</td>`;
+      }).join('') + '</tr>';
+    }
+    document.querySelector('#occTable tbody').innerHTML = rows;
+  }
+
+  async function handleChangePassword(){
+    const val = document.getElementById('newAdminPass').value.trim();
+    const msg = document.getElementById('passMsg');
+    if(!val || val.length<4){ msg.textContent='A senha deve ter ao menos 4 caracteres.'; msg.className='msg err'; return; }
+    try{
+      await adminChangePasswordRequest(adminPassword, val);
+      adminPassword = val;
+      msg.textContent='Senha atualizada com sucesso.'; msg.className='msg ok';
+      document.getElementById('newAdminPass').value='';
+    }catch(e){
+      msg.textContent='Não foi possível atualizar a senha.'; msg.className='msg err';
+    }
+  }
+
+  // ---------- tabs ----------
+  function setupTabs(){
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const view = btn.dataset.view;
+        document.getElementById('view-funcionario').classList.toggle('hidden', view!=='funcionario');
+        document.getElementById('view-admin').classList.toggle('hidden', view!=='admin');
+      });
+    });
+  }
+
+  // ---------- init ----------
+  async function init(){
+    if(API_URL.indexOf('COLOQUE_AQUI') === 0){
+      document.getElementById('setupWarning').classList.remove('hidden');
+    }
+    populateCargoSelects();
+    populateTipoSelect();
+    setupTabs();
+    initCalendarNav();
+
+    document.getElementById('f_cargo').addEventListener('change', ()=>{ selectedStartISO=null; renderCalendar(); updateSummary(); });
+    document.getElementById('f_tipo').addEventListener('change', ()=>{ selectedStartISO=null; renderCalendar(); updateSummary(); });
+    document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+    document.getElementById('lookupBtn').addEventListener('click', handleLookup);
+
+    document.getElementById('adminLoginBtn').addEventListener('click', handleAdminLogin);
+    document.getElementById('adminPass').addEventListener('keydown', e=>{ if(e.key==='Enter') handleAdminLogin(); });
+    document.getElementById('filterCargo').addEventListener('change', renderAdminTable);
+    document.getElementById('filterUnidade').addEventListener('input', renderAdminTable);
+    document.getElementById('filterBusca').addEventListener('input', renderAdminTable);
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+    document.getElementById('changePassBtn').addEventListener('click', handleChangePassword);
+    document.getElementById('occPrev').addEventListener('click', ()=>{ occMonth--; if(occMonth<0){occMonth=11;occYear--;} renderOccupancy(); });
+    document.getElementById('occNext').addEventListener('click', ()=>{ occMonth++; if(occMonth>11){occMonth=0;occYear++;} renderOccupancy(); });
+
+    populateUnidadeSelect();
+    allRecords = await loadAllRecords();
+    renderCalendar();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>
