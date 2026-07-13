@@ -212,19 +212,6 @@
     <p class="msg" id="formMsg"></p>
   </div>
 
-  <div class="card">
-    <h2><span class="eyebrow">Consulta</span>Minhas solicitações</h2>
-    <div class="grid-2">
-      <label>E-mail utilizado no cadastro
-        <input type="email" id="lookupEmail" placeholder="seunome@congonhas.mg.gov.br">
-      </label>
-      <label>&nbsp;
-        <button class="secondary" id="lookupBtn" type="button">Buscar</button>
-      </label>
-    </div>
-    <div id="lookupResults"></div>
-  </div>
-
 </section>
 
 <!-- ===================== VIEW ADMIN ===================== -->
@@ -244,6 +231,11 @@
   </div>
 
   <div id="adminPanel" class="hidden">
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;">
+      <span style="font-weight:700;color:var(--teal-dark);">Painel administrativo</span>
+      <button class="secondary" id="adminLogoutBtn" type="button">Sair</button>
+    </div>
 
     <div class="card">
       <h2><span class="eyebrow">Visão geral</span>Todas as solicitações</h2>
@@ -286,6 +278,13 @@
         </label>
       </div>
       <p class="msg" id="passMsg"></p>
+    </div>
+
+    <div class="card" style="border-color:#E6B9A6;">
+      <h2 style="color:var(--brick);"><span class="eyebrow" style="color:var(--brick);">Zona de risco</span>Limpar todas as solicitações</h2>
+      <p class="small-note">Apaga permanentemente TODAS as solicitações de férias cadastradas (de todos os cargos e unidades), liberando novamente todas as datas. Use apenas para testes ou para reiniciar a escala — não há como desfazer.</p>
+      <button class="danger" id="clearAllBtn" type="button" style="margin-top:8px;">Limpar todas as solicitações</button>
+      <p class="msg" id="clearAllMsg"></p>
     </div>
 
   </div>
@@ -440,15 +439,6 @@
     }catch(e){ console.error(e); return []; }
   }
 
-  async function lookupOwnRecords(email){
-    const data = await apiRequest({ action:'lookup', email });
-    return Array.isArray(data.records) ? data.records : [];
-  }
-  async function deleteOwnRecord(id, email){
-    const data = await apiRequest({ action:'deleteOwn', id, email });
-    return !!data.ok;
-  }
-
   function populateUnidadeSelect(){
     const opts = UNIDADES.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
     document.getElementById('f_unidade').insertAdjacentHTML('beforeend', opts);
@@ -468,6 +458,9 @@
   }
   async function adminChangePasswordRequest(oldPassword, newPassword){
     await apiPostRequest({ action:'adminChangePassword', password:oldPassword, newPassword });
+  }
+  async function adminClearAllRequest(password){
+    await apiPostRequest({ action:'adminClearAll', password });
   }
 
 
@@ -625,34 +618,6 @@
     document.getElementById('submitBtn').textContent = 'Confirmar Solicitação';
   }
 
-  // ---------- lookup / cancel ----------
-  async function handleLookup(){
-    const email = document.getElementById('lookupEmail').value.trim().toLowerCase();
-    const box = document.getElementById('lookupResults');
-    if(!email){ box.innerHTML = '<p class="msg err">Informe um e-mail.</p>'; return; }
-    let mine = [];
-    try{ mine = await lookupOwnRecords(email); }catch(e){ box.innerHTML = '<p class="msg err">Erro ao buscar. Tente novamente.</p>'; return; }
-    if(!mine.length){ box.innerHTML = '<p class="small-note">Nenhuma solicitação encontrada para este e-mail.</p>'; return; }
-    box.innerHTML = mine.map(r=>`
-      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:10px 0;">
-        <div>
-          <span class="badge ${r.cargo}">${CARGOS[r.cargo].label}</span>
-          <div style="margin-top:4px;">${TIPOS[r.tipo].label}<br>
-          <b>${fmtDate(r.start)} → ${fmtDate(r.end)}</b> · ${escapeHtml(r.unidade)}</div>
-        </div>
-        <button class="danger" data-id="${r.id}">Cancelar</button>
-      </div>
-    `).join('');
-    box.querySelectorAll('button.danger').forEach(b=>{
-      b.onclick = async ()=>{
-        if(!confirm('Cancelar esta solicitação de férias?')) return;
-        await deleteOwnRecord(b.dataset.id, email);
-        allRecords = await loadAllRecords();
-        handleLookup();
-      };
-    });
-  }
-
   // ---------- admin ----------
   let adminRecords = []; // dados completos — só carregados após login válido
 
@@ -771,6 +736,31 @@
     }
   }
 
+  function handleAdminLogout(){
+    isAdmin = false;
+    adminPassword = null;
+    adminRecords = [];
+    document.getElementById('adminPass').value = '';
+    document.getElementById('adminMsg').textContent = '';
+    document.getElementById('adminPanel').classList.add('hidden');
+    document.getElementById('adminLoginCard').classList.remove('hidden');
+  }
+
+  async function handleClearAll(){
+    const msg = document.getElementById('clearAllMsg');
+    if(!confirm('Isso vai apagar PERMANENTEMENTE todas as solicitações de férias cadastradas. Essa ação não pode ser desfeita. Continuar?')) return;
+    if(!confirm('Tem certeza mesmo? Todas as datas voltarão a ficar disponíveis para todo mundo.')) return;
+    try{
+      await adminClearAllRequest(adminPassword);
+      msg.textContent = 'Todas as solicitações foram apagadas.'; msg.className='msg ok';
+      await refreshAdminTable();
+      allRecords = await loadAllRecords();
+      renderOccupancy();
+    }catch(e){
+      msg.textContent = 'Não foi possível limpar as solicitações.'; msg.className='msg err';
+    }
+  }
+
   // ---------- tabs ----------
   function setupTabs(){
     document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -797,7 +787,6 @@
     document.getElementById('f_cargo').addEventListener('change', ()=>{ selectedStartISO=null; renderCalendar(); updateSummary(); });
     document.getElementById('f_tipo').addEventListener('change', ()=>{ selectedStartISO=null; renderCalendar(); updateSummary(); });
     document.getElementById('submitBtn').addEventListener('click', handleSubmit);
-    document.getElementById('lookupBtn').addEventListener('click', handleLookup);
 
     document.getElementById('adminLoginBtn').addEventListener('click', handleAdminLogin);
     document.getElementById('adminPass').addEventListener('keydown', e=>{ if(e.key==='Enter') handleAdminLogin(); });
@@ -806,6 +795,8 @@
     document.getElementById('filterBusca').addEventListener('input', renderAdminTable);
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
     document.getElementById('changePassBtn').addEventListener('click', handleChangePassword);
+    document.getElementById('adminLogoutBtn').addEventListener('click', handleAdminLogout);
+    document.getElementById('clearAllBtn').addEventListener('click', handleClearAll);
     document.getElementById('occPrev').addEventListener('click', ()=>{ occMonth--; if(occMonth<0){occMonth=11;occYear--;} renderOccupancy(); });
     document.getElementById('occNext').addEventListener('click', ()=>{ occMonth++; if(occMonth>11){occMonth=0;occYear++;} renderOccupancy(); });
 
