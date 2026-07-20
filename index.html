@@ -243,6 +243,7 @@
         <select id="filterCargo"><option value="">Todos os cargos</option></select>
         <input type="text" id="filterUnidade" placeholder="Filtrar por unidade">
         <input type="text" id="filterBusca" placeholder="Buscar nome, matrícula ou e-mail">
+        <button class="secondary" id="refreshAdminBtn" type="button">Atualizar / Pesquisar</button>
         <button class="secondary" id="exportCsvBtn" type="button">Exportar CSV</button>
       </div>
       <table id="adminTable">
@@ -792,7 +793,10 @@
     document.getElementById('adminPass').addEventListener('keydown', e=>{ if(e.key==='Enter') handleAdminLogin(); });
     document.getElementById('filterCargo').addEventListener('change', renderAdminTable);
     document.getElementById('filterUnidade').addEventListener('input', renderAdminTable);
+    document.getElementById('filterUnidade').addEventListener('keydown', e=>{ if(e.key==='Enter') renderAdminTable(); });
     document.getElementById('filterBusca').addEventListener('input', renderAdminTable);
+    document.getElementById('filterBusca').addEventListener('keydown', e=>{ if(e.key==='Enter') renderAdminTable(); });
+    document.getElementById('refreshAdminBtn').addEventListener('click', refreshAdminTable);
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
     document.getElementById('changePassBtn').addEventListener('click', handleChangePassword);
     document.getElementById('adminLogoutBtn').addEventListener('click', handleAdminLogout);
