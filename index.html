@@ -247,7 +247,7 @@
       </div>
       <table id="adminTable">
         <thead>
-          <tr><th>Cargo</th><th>Nome</th><th>Matrícula</th><th>Unidade</th><th>Tipo</th><th>Início</th><th>Fim</th><th></th></tr>
+          <tr><th>Cargo</th><th>Nome</th><th>Matrícula</th><th>Unidade</th><th>Tipo</th><th>Início</th><th>Último dia</th><th></th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -599,7 +599,7 @@
 
     try{
       const result = await apiRequest({ action:'create', email, nome, matricula, unidade, cargo, tipo, start:selectedStartISO });
-      msg.textContent = `Solicitação confirmada! Férias de ${fmtDate(result.start)} até ${fmtDate(result.end)}.`;
+      msg.textContent = `Solicitação confirmada! Início das férias: ${fmtDate(result.start)}. Último dia de férias: ${fmtDate(result.end)}. Retorno ao trabalho: ${fmtDate(addDaysISO(result.end,1))}.`;
       msg.className='msg ok';
       selectedStartISO = null;
       document.getElementById('summaryBox').classList.add('hidden');
