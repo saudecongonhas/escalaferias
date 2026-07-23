@@ -191,7 +191,7 @@
     </div>
 
     <div id="calendarSection" class="calendar-section disabled">
-      <p class="hint">Selecione o cargo e o tipo de férias acima para habilitar o calendário. A escala de 2026 já está fechada — o agendamento está disponível somente para 2027.</p>
+      <p class="hint">Selecione o cargo e o tipo de férias acima para habilitar o calendário. A escala de 2026 já está fechada — o agendamento está disponível de janeiro/2027 até março/2028.</p>
       <div class="calendar-nav">
         <button id="prevMonth" type="button">‹</button>
         <span id="monthLabel">—</span>
@@ -366,6 +366,11 @@
     return cur;
   }
   function todayISO(){ return toISO(new Date()); }
+  function nextBusinessDayISO(s){
+    let d = addDaysISO(s,1);
+    while(!isBusinessDay(d)) d = addDaysISO(d,1);
+    return d;
+  }
 
   function computeRange(startISO, tipoId){
     const tipo = TIPOS[tipoId];
@@ -402,7 +407,7 @@
   // ---------- backend (Google Apps Script + Google Sheets) ----------
   // Cole aqui a URL do seu Apps Script publicado (termina em /exec).
   // Veja o arquivo "AppsScript-Backend" para o passo a passo.
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzTGyxWad5FDU2JO6vej2gf4TJ-CZMOfLZ-GHdGbUW-CdSk7m2PiS7KYdYBwilQyrY5/exec';
+  const API_URL = 'COLOQUE_AQUI_A_URL_DO_SEU_APPS_SCRIPT';
 
   async function apiRequest(params){
     const qs = new URLSearchParams(params).toString();
@@ -480,19 +485,31 @@
   }
 
   // ---------- calendar (form) ----------
-  let calYear, calMonth; // calMonth 0-11
+  let calYear, calMonth; // derivados de calAbsMonth a cada renderização
+  let calAbsMonth; // mês absoluto (ano*12+mês) — permite navegar entre anos sem complicar a lógica
   let selectedStartISO = null;
 
-  const ESCALA_YEAR = 2027; // escala de 2026 já fechada/lotada; agendamento liberado somente para 2027
+  // agendamento liberado de janeiro/2027 até março/2028 (algumas pessoas só completam
+  // o período aquisitivo de 1 ano após dezembro/2027, e só poderão tirar férias depois)
+  const ESCALA_START_ABS = 2027*12 + 0; // janeiro/2027
+  const ESCALA_END_ABS   = 2028*12 + 2; // março/2028
+
+  function absToYearMonth(abs){ return { year: Math.floor(abs/12), month: abs%12 }; }
 
   function initCalendarNav(){
-    calYear = ESCALA_YEAR; calMonth = 0;
+    calAbsMonth = ESCALA_START_ABS;
     const ySel = document.getElementById('yearSelect');
-    ySel.innerHTML = `<option value="${ESCALA_YEAR}">${ESCALA_YEAR}</option>`;
-    ySel.value = ESCALA_YEAR;
-    ySel.disabled = true;
-    document.getElementById('prevMonth').onclick=()=>{ if(calMonth>0){ calMonth--; renderCalendar(); } };
-    document.getElementById('nextMonth').onclick=()=>{ if(calMonth<11){ calMonth++; renderCalendar(); } };
+    ySel.innerHTML = `<option value="2027">2027</option><option value="2028">2028</option>`;
+    ySel.onchange=()=>{
+      const y = parseInt(ySel.value,10);
+      let abs = y*12+0;
+      if(abs<ESCALA_START_ABS) abs=ESCALA_START_ABS;
+      if(abs>ESCALA_END_ABS) abs=ESCALA_END_ABS;
+      calAbsMonth = abs;
+      renderCalendar();
+    };
+    document.getElementById('prevMonth').onclick=()=>{ if(calAbsMonth>ESCALA_START_ABS){ calAbsMonth--; renderCalendar(); } };
+    document.getElementById('nextMonth').onclick=()=>{ if(calAbsMonth<ESCALA_END_ABS){ calAbsMonth++; renderCalendar(); } };
   }
 
   function currentSelection(){
@@ -502,9 +519,12 @@
   function renderCalendar(){
     const grid = document.getElementById('calendarGrid');
     const label = document.getElementById('monthLabel');
+    const ym = absToYearMonth(calAbsMonth);
+    calYear = ym.year; calMonth = ym.month;
     label.textContent = MONTHS[calMonth] + ' / ' + calYear;
-    document.getElementById('prevMonth').disabled = (calMonth===0);
-    document.getElementById('nextMonth').disabled = (calMonth===11);
+    document.getElementById('yearSelect').value = String(calYear);
+    document.getElementById('prevMonth').disabled = (calAbsMonth===ESCALA_START_ABS);
+    document.getElementById('nextMonth').disabled = (calAbsMonth===ESCALA_END_ABS);
     const { cargo, tipo } = currentSelection();
     const section = document.getElementById('calendarSection');
     if(!cargo || !tipo){
@@ -557,7 +577,7 @@
     const { start, end } = computeRange(selectedStartISO, tipo);
     box.classList.remove('hidden');
     box.innerHTML = `<b>Resumo:</b> ${CARGOS[cargo].label} • ${TIPOS[tipo].label}<br>
-      Início: <b>${fmtDate(start)}</b> &nbsp;→&nbsp; Retorno ao trabalho: <b>${fmtDate(addDaysISO(end,1))}</b> (último dia de férias: ${fmtDate(end)})`;
+      Início: <b>${fmtDate(start)}</b> &nbsp;→&nbsp; Retorno ao trabalho: <b>${fmtDate(nextBusinessDayISO(end))}</b> (último dia de férias: ${fmtDate(end)})`;
     btn.disabled=false;
   }
 
@@ -600,7 +620,7 @@
 
     try{
       const result = await apiRequest({ action:'create', email, nome, matricula, unidade, cargo, tipo, start:selectedStartISO });
-      msg.textContent = `Solicitação confirmada! Início das férias: ${fmtDate(result.start)}. Último dia de férias: ${fmtDate(result.end)}. Retorno ao trabalho: ${fmtDate(addDaysISO(result.end,1))}.`;
+      msg.textContent = `Solicitação confirmada! Início das férias: ${fmtDate(result.start)}. Último dia de férias: ${fmtDate(result.end)}. Retorno ao trabalho: ${fmtDate(nextBusinessDayISO(result.end))}.`;
       msg.className='msg ok';
       selectedStartISO = null;
       document.getElementById('summaryBox').classList.add('hidden');
