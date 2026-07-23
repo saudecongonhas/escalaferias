@@ -261,6 +261,8 @@
         <button id="occPrev" type="button">‹</button>
         <span id="occMonthLabel">—</span>
         <button id="occNext" type="button">›</button>
+        <select id="occMonthSelect"></select>
+        <select id="occYearSelect"></select>
       </div>
       <div style="overflow-x:auto;">
         <table class="occ-table" id="occTable"><thead></thead><tbody></tbody></table>
@@ -722,9 +724,17 @@
 
   // occupancy view
   let occYear, occMonth;
+  function populateOccSelectors(){
+    const mSel = document.getElementById('occMonthSelect');
+    mSel.innerHTML = MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    const ySel = document.getElementById('occYearSelect');
+    ySel.innerHTML = [2026,2027,2028,2029].map(y=>`<option value="${y}">${y}</option>`).join('');
+  }
   function renderOccupancy(){
-    if(occYear===undefined){ const n=new Date(); occYear=n.getFullYear(); occMonth=n.getMonth(); }
+    if(occYear===undefined){ occYear=2027; occMonth=0; } // início da escala, ponto de partida útil
     document.getElementById('occMonthLabel').textContent = MONTHS[occMonth]+' / '+occYear;
+    document.getElementById('occMonthSelect').value = String(occMonth);
+    document.getElementById('occYearSelect').value = String(occYear);
     const daysInMonth = new Date(occYear, occMonth+1, 0).getDate();
     const cargoIds = Object.keys(CARGOS);
 
@@ -823,8 +833,11 @@
     document.getElementById('clearAllBtn').addEventListener('click', handleClearAll);
     document.getElementById('occPrev').addEventListener('click', ()=>{ occMonth--; if(occMonth<0){occMonth=11;occYear--;} renderOccupancy(); });
     document.getElementById('occNext').addEventListener('click', ()=>{ occMonth++; if(occMonth>11){occMonth=0;occYear++;} renderOccupancy(); });
+    document.getElementById('occMonthSelect').addEventListener('change', e=>{ occMonth=parseInt(e.target.value,10); renderOccupancy(); });
+    document.getElementById('occYearSelect').addEventListener('change', e=>{ occYear=parseInt(e.target.value,10); renderOccupancy(); });
 
     populateUnidadeSelect();
+    populateOccSelectors();
     allRecords = await loadAllRecords();
     renderCalendar();
   }
